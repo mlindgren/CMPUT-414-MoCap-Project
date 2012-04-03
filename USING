@@ -1,0 +1,63 @@
+Using the amc_viewer code to read, manipulate, and display .amc/.asf data.
+
+Reading
+===============
+
+#include <Library/Library.hpp>
+#include <Character/Character.hpp>
+
+Library::init("my/data/folder");
+for (unsigned int idx = 0; idx < Library::motion_count(); ++idx) {
+    Library::Motion const &m =  Library::motion(idx);
+    for (unsigned int f = 0; f < m.frames(); ++f) {
+        Character::Pose my_pose;
+        m.get_pose(f, my_pose);
+    }
+}
+
+The function Library::init Scans the given directory for amc/afs files and loads them. You can retrieve these loaded files by calling Library::motion(index) with 0 <= index <= Library::motion_count() .
+
+Each motion represents the state of a character over time. The basic representation of this state is a Character::Pose.
+
+You can get a pose from a motion by calling:
+
+m.get_pose(20, my_pose); //get pose at frame 20 into my_pose
+m.get_local_pose(20, my_local_pose); //get pose -- without root translation -- into my_local_pose.
+
+Poses can be transformed into two other representations, Angles and WorldBones.
+
+Angles
+---------
+
+#include <Character/Character.hpp>
+
+Character::Angles angles;
+my_pose.to_angles(angles);
+//...modify angles...
+angles.to_pose(my_pose);
+
+Angles are raw joint-angle data, or basically what you would get if you just read the amc file yourself.
+
+WorldBones
+------------
+
+#include <Character/pose_utils.hpp>
+
+Character::WorldBones wb;
+get_world_bones(my_pose, wb);
+//... do something with wb
+//NOTE: no function to convert back.
+
+WorldBones give you the absolute position of the base and tip of each bone along with the orientation of the bone's coordinate frame. This means you can think about bones without worrying about transforming them by their parents.
+
+Displaying
+============
+
+#include <Character/Draw.hpp>
+
+State no_state;
+no_state.clear();
+Character::draw(my_pose, no_state)
+
+The draw function draws a pose at a given state (== additional absolute position + orientation for root bone). It gives a basic stovepipe-y character.
+
