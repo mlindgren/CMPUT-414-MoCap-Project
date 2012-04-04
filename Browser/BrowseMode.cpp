@@ -71,10 +71,11 @@ void BrowseMode::update(float const elapsed_time)
   else
   {
     if(!frameZero) cerr << "Frame " << frame << " happened before frame 0!" << endl;
+    frameZero = true;
   }
 
-  current_pose.root_position.x -= current_motion_root.x;
-  current_pose.root_position.z -= current_motion_root.z;
+  //current_pose.root_position.x -= current_motion_root.x;
+  //current_pose.root_position.z -= current_motion_root.z;
 
   if (track)
   {
