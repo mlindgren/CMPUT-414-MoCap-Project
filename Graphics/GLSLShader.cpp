@@ -23,10 +23,16 @@ namespace
 {
 string shader_log(GLhandleARB shader)
 {
-  GLint len = 0;
+  // This function causes the program to segfault when a skin is being used,
+  // seemingly because one of the arguments of glGetInfoLogARB is NULL.
+  // Haven't had time to debug it yet, and likely won't have time to in the
+  // future, so I'm just commenting out since it's "non-essential."
+
+  /*GLint len = 0;
   glGetObjectParameterivARB(shader, GL_OBJECT_INFO_LOG_LENGTH_ARB, &len);
   vector< GLchar > log(len, '\0');
   GLint written = 0;
+  assert(glGetInfoLogARB != NULL);
   glGetInfoLogARB(shader, len, &written, &log[0]);
   assert(written <= len);
   string out = "";
@@ -34,7 +40,9 @@ string shader_log(GLhandleARB shader)
   {
     out += log[i];
   }
-  return out;
+  return out; */
+
+  return "";
 }
 }
 
