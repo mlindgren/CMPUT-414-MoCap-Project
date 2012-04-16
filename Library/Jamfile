@@ -2,7 +2,7 @@ TOP = .. ;
 
 SubDir TOP Library ;
 
-NAMES = Library Reader ReadSkeleton Skeleton ;
+NAMES = Library Reader ReadSkeleton Skeleton LerpBlender ;
 
 if $(LIBRARY_USE_VFILE) {
 	NAMES += ReadSkeletonV Vfile WriteAsfAmc WriteBvh ; 

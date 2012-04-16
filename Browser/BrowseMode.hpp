@@ -5,6 +5,7 @@
 
 #include <Character/Character.hpp>
 #include <Character/Skin.hpp>
+#include <Library/LerpBlender.hpp>
 
 #include <vector>
 #include <deque>
@@ -41,10 +42,14 @@ public:
   Character::State current_state;
   Vector3f current_motion_root;
   unsigned int current_motion;
+  unsigned int frame;
   float time;
   float play_speed;
 
   Character::Skin skin;
+
+private:
+  Library::LerpBlender blender;
 };
 
 #endif //BROWSEMODE_HPP

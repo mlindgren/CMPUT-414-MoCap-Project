@@ -163,6 +163,7 @@ Vector< NUM, 3 > rotate( Vector< NUM, 3 > const &v, Quat< NUM > const &q )
   return make_vector(temp.x, temp.y, temp.z);
 }
 
+/* Note: this is non-spherical linear interpolation. */
 template< typename NUM >
 Quat< NUM > lerp( Quat< NUM > a, Quat< NUM > const &b, NUM const &amt )
 {
@@ -171,6 +172,12 @@ Quat< NUM > lerp( Quat< NUM > a, Quat< NUM > const &b, NUM const &amt )
   a.y = a.y + (b.y - a.y) * amt;
   a.z = a.z + (b.z - a.z) * amt;
   return a;
+}
+
+template<typename NUM>
+Quat<NUM> nlerp(Quat<NUM> a, Quat<NUM> const &b, NUM const &amt)
+{
+  return normalize(lerp(a, b, amt));
 }
 
 template< typename NUM >

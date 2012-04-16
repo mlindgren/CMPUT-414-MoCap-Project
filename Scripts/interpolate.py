@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# CMPUT 414 Project Motion Interpolation Script
+# CMPUT 414 Project Motion Linear Interpolation Script
 import sys
 import re
 
@@ -57,7 +57,21 @@ class JointPosition:
 
         differences = []
         for i in range(len(other.positions)):
-            differences.append(other.positions[i] - self.positions[i])
+            difference = other.positions[i] - self.positions[i]
+
+            # We should never be rotating more than 180 degrees, or we're going
+            # in the wrong direction.  Thus, the difference between two
+            # components of a joint position should never be more than 180
+            # degrees.  Note that this is not really a safe assumption since
+            # the positions could in theory have translation components,
+            # although in practice that only happens with the root which we
+            # do not interpolate.
+            if difference > 180:
+                difference = 360 - difference
+            elif difference < -180:
+                difference += 360
+
+            differences.append(difference)
 
         return JointPosition(self.name, differences)
 
@@ -71,7 +85,7 @@ class JointPosition:
 
         sums = []
         for i in range(len(other.positions)):
-            sums.append(self.positions[i] + other.positions[i])
+            sums.append((self.positions[i] + other.positions[i]) % 360)
 
         return JointPosition(self.name, sums)
 
@@ -111,7 +125,7 @@ def findFirstFrame(filename):
             found_first = True
             continue
 
-        # Quite at the start of the second frame
+        # Quit at the start of the second frame
         if line.strip() == "2":
             break
 
@@ -168,9 +182,15 @@ def interpolateMotions(first_frame, last_frame, n_frames):
         deltas.append(difference.divide(n_frames))
 
     for i in range(1, n_frames + 1):
+
         out_buf.append(str(i))
         for position_idx, joint_position in enumerate(first_frame):
-            assert(deltas[position_idx] != None)
+
+            # We don't perform interpolation on the root
+            if joint_position.name == "root":
+                out_buf.append(str(joint_position))
+                continue
+
             out_buf.append(str(joint_position.sum(deltas[position_idx].multiply(i))))
 
     return '\n'.join(out_buf)

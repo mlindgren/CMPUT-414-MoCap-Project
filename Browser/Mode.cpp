@@ -37,7 +37,8 @@ void Mode::main_loop()
       if (event.type == SDL_KEYDOWN
           && ((event.key.keysym.sym == SDLK_ESCAPE &&
                event.key.keysym.mod & KMOD_ALT)
-              || (event.key.keysym.sym == SDLK_q &&
+              || (event.key.keysym.sym == SDLK_q ||
+                  event.key.keysym.sym == SDLK_w &&
                   event.key.keysym.mod & KMOD_LMETA)))
       {
         quit_flag = true;

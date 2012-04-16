@@ -25,6 +25,7 @@ using std::endl;
 using std::ofstream;
 
 BrowseMode::BrowseMode()
+: blender(Library::motion_nonconst(0), Library::motion_nonconst(1))
 {
   camera = make_vector(10.0f, 10.0f, 10.0f);
   target = make_vector(0.0f, 0.0f, 0.0f);
@@ -36,6 +37,7 @@ BrowseMode::BrowseMode()
   current_motion = 0;
   time = 0.0f;
   play_speed = 1.0f;
+  frame = 0;
 }
 
 BrowseMode::~BrowseMode()
@@ -55,14 +57,18 @@ void BrowseMode::update(float const elapsed_time)
   // Cycle through all animations in the directory
   // time = fmodf(elapsed_time * play_speed + time, motion.length());
   time = elapsed_time * play_speed + time;
-  if(time > motion.length())
-    switch_motion(1);
+  if(time < 0) time = 0;
 
-  unsigned int frame = (unsigned int)(time / motion.skeleton->timestep);
-  if (frame >= motion.frames()) frame = motion.frames() - 1;
+  //if(time > motion.length())
+  //  switch_motion(1);
 
-  motion.get_pose(frame, current_pose);
+  frame = (unsigned int)(time / motion.skeleton->timestep);
+  //if (frame >= motion.frames()) frame = motion.frames() - 1;
 
+  //motion.get_pose(frame, current_pose);
+  blender.nextFrame(frame, current_pose);
+
+  /*
   if(frame == 0)
   {
     frameZero = true;
@@ -72,14 +78,14 @@ void BrowseMode::update(float const elapsed_time)
   {
     if(!frameZero) cerr << "Frame " << frame << " happened before frame 0!" << endl;
     frameZero = true;
-  }
+  }*/
 
   //current_pose.root_position.x -= current_motion_root.x;
   //current_pose.root_position.z -= current_motion_root.z;
 
   if (track)
   {
-    Vector3f delta = current_state.position + current_pose.root_position - target;
+    Vector3f delta = /*current_state.position + */ current_pose.root_position - target;
     target += delta;
     camera += delta;
   }
@@ -95,10 +101,11 @@ void BrowseMode::switch_motion(short delta)
    * adding it the model starts to float.
    * TODO: This probably should be done more robustly. At present I am not
    * entirely sure what that even means, though.*/
-  current_state.position.x = current_state.position.x + 
+
+  /*current_state.position.x = current_state.position.x + 
                              current_pose.root_position.x;
   current_state.position.z = current_state.position.z +
-                             current_pose.root_position.z;
+                             current_pose.root_position.z; */
 
   current_motion += delta;
   if (current_motion >= Library::motion_count())
@@ -409,7 +416,8 @@ void BrowseMode::draw()
     Library::Motion const &motion = Library::motion(current_motion);
     info1 << "Motion: " << motion.filename;
     info2 << "Skeleton: " << motion.skeleton->filename;
-    info3 << "Frame " << (unsigned int)(time / motion.skeleton->timestep) << " of " << motion.frames() << " (" << 1.0f / motion.skeleton->timestep << " fps)";
+    info3 << "Frame " << frame << " " << blender.getIsInterpolating();
+    //(unsigned int)(time / motion.skeleton->timestep) << " of " << motion.frames() << " (" << 1.0f / motion.skeleton->timestep << " fps)";
     info4 << play_speed << "x speed";
     glEnable(GL_BLEND);
     glEnable(GL_TEXTURE_2D);
