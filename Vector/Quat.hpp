@@ -4,6 +4,7 @@
 #include "Vector.hpp"
 
 #include <iostream>
+#include <cmath>
 #include <assert.h>
 
 using std::ostream;
@@ -110,6 +111,12 @@ Quat< NUM > multiply(Quat< NUM > const &a, Quat< NUM > const &b)
   return ret;
 }
 
+template<typename NUM>
+NUM dot(Quat<NUM> const &a, Quat<NUM> const &b)
+{
+  return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+}
+
 template< typename NUM >
 Quat< NUM > normalize(Quat< NUM > const &a)
 {
@@ -165,7 +172,7 @@ Vector< NUM, 3 > rotate( Vector< NUM, 3 > const &v, Quat< NUM > const &q )
 
 /* Note: this is non-spherical linear interpolation. */
 template< typename NUM >
-Quat< NUM > lerp( Quat< NUM > a, Quat< NUM > const &b, NUM const &amt )
+Quat< NUM > lerp( Quat< NUM > a, Quat< NUM > const &b, float amt )
 {
   a.w = a.w + (b.w - a.w) * amt;
   a.x = a.x + (b.x - a.x) * amt;
@@ -175,9 +182,37 @@ Quat< NUM > lerp( Quat< NUM > a, Quat< NUM > const &b, NUM const &amt )
 }
 
 template<typename NUM>
-Quat<NUM> nlerp(Quat<NUM> a, Quat<NUM> const &b, NUM const &amt)
+Quat<NUM> nlerp(Quat<NUM> a, Quat<NUM> const &b, float amt)
 {
   return normalize(lerp(a, b, amt));
+}
+
+/* Spherical linear interpolation.  Based on
+ * http://www.3dkingdoms.com/weekly/quat.h */
+template <typename NUM>
+Quat<NUM> slerp(Quat<NUM> a, Quat<NUM> const &b, float amt)
+{
+  float w1, w2;
+
+  float cosTheta = dot(a, b);
+  float theta    = (float) acos(cosTheta);
+  float sinTheta = (float) sin(theta);
+
+  if( sinTheta > 0.001f )
+  {
+    w1 = float( sin( (1.0f - amt) * theta ) / sinTheta);
+    w2 = float( sin( amt * theta) / sinTheta);
+  } 
+  else 
+  {
+    w1 = 1.0f - amt;
+    w2 = amt;
+  }
+
+  Quat<NUM> res;
+  res = a*w1 + b*w2;
+
+  return res;
 }
 
 template< typename NUM >
@@ -198,12 +233,25 @@ inline Quat< NUM > operator+( Quat< NUM > a, Quat< NUM > b )
 {
   a = abs(a);
   b = abs(b);
-  Quat< NUM > ret;
-  ret.w = a.w + b.w;
-  ret.x = a.x + b.x;
-  ret.y = a.y + b.y;
-  ret.z = a.z + b.z;
-  return ret;
+  Quat< NUM > res;
+  res.w = a.w + b.w;
+  res.x = a.x + b.x;
+  res.y = a.y + b.y;
+  res.z = a.z + b.z;
+  return res;
+}
+
+// Scalar multiplication
+template<typename NUM>
+inline Quat<NUM> operator*(Quat<NUM> a, NUM s)
+{
+  Quat<NUM> res;
+  res.w = a.w * s;
+  res.x = a.x * s;
+  res.y = a.y * s;
+  res.z = a.z * s;
+
+  return res;
 }
 
 template< typename NUM >

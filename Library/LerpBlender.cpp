@@ -83,9 +83,9 @@ void LerpBlender::nextFrame(unsigned int frame, Pose &output)
         interp_value = 1.0f;
       }
 
-      from_pose.bone_orientations[i] = nlerp(from_pose.bone_orientations[i],
-                                        to_pose.bone_orientations[i],
-                                        interp_value);
+      from_pose.bone_orientations[i] = slerp(from_pose.bone_orientations[i],
+                                             to_pose.bone_orientations[i],
+                                             interp_value);
     }
     
     isInterpolating = true;
