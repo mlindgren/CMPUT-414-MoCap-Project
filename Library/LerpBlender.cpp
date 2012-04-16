@@ -75,18 +75,36 @@ void LerpBlender::nextFrame(unsigned int frame, Pose &output)
   if(from_frame >= n_from_frames - n_interp_frames && 
      from_frame < n_from_frames)
   {
+    float interp_value = (float) to_frame / n_interp_frames;
+    if(interp_value > 1.0f)
+    {
+      interp_value = 1.0f;
+    }
+
+    float interp_conjugate = 1.0f - interp_value;
+
+    /* Loop through all bones and interpolate their orientation quaternions
+     * Note that we asserted above that the two animations have the same number
+     * of bones */
     for(unsigned int i = 0; i < from_pose.bone_orientations.size(); ++i)
     {
-      float interp_value = (float) to_frame / n_interp_frames;
-      if(interp_value > 1.0f)
-      {
-        interp_value = 1.0f;
-      }
-
       from_pose.bone_orientations[i] = slerp(from_pose.bone_orientations[i],
                                              to_pose.bone_orientations[i],
                                              interp_value);
     }
+
+    // Interpolate the root position and orientation
+    from_pose.root_orientation = slerp(from_pose.root_orientation,
+                                       to_pose.root_orientation,
+                                       interp_value);
+
+    from_pose.root_position.x = from_pose.root_position.x * interp_conjugate +
+                                   to_pose.root_position.x * interp_value;
+    from_pose.root_position.y = from_pose.root_position.y * interp_conjugate +
+                                   to_pose.root_position.y * interp_value;
+    from_pose.root_position.z = from_pose.root_position.z * interp_conjugate +
+                                   to_pose.root_position.z * interp_value;
+                                   
     
     isInterpolating = true;
     output = from_pose;
