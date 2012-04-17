@@ -2,6 +2,7 @@
 #define __LERPBLENDER_H__
 
 #include <Library/Library.hpp>
+#include <Library/DistanceMap.hpp>
 #include <Character/Character.hpp>
 
 // Herp derp lerp
@@ -16,15 +17,24 @@ public:
   /* Initializes a lerp blender from two motions to be blended */
   LerpBlender(Motion &f, Motion &t);
 
- void nextFrame(unsigned int frame, Character::Pose &output);
+  /* These functions caused the blender to advance to the next frame
+   * or return to the previous frame, respectively. */
+  void incrementFrame();
+  void decrementFrame();
 
- bool getIsInterpolating() { return isInterpolating; }
+  void getPose(Character::Pose &output);
+
+  bool getIsInterpolating() { return isInterpolating; }
 
 private:
   Motion &from;
   Motion &to;
 
+  DistanceMap distance_map;
+
   bool isInterpolating;
+
+  unsigned int cur_frame;
 
   // Current frame in from and to motions
   //unsigned int from_frame;

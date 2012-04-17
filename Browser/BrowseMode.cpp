@@ -15,6 +15,7 @@
 #include <sstream>
 #include <iostream>
 #include <fstream>
+#include <utility>
 
 using std::string;
 
@@ -23,6 +24,7 @@ using std::ostringstream;
 using std::cout;
 using std::cerr;
 using std::endl;
+using std::pair;
 
 using std::ofstream;
 
@@ -40,10 +42,6 @@ BrowseMode::BrowseMode()
   time = 0.0f;
   play_speed = 1.0f;
   frame = 0;
-
-  Library::DistanceMap d = Library::DistanceMap(Library::motion_nonconst(0), Library::motion_nonconst(0));
-
-  cerr << d;
 }
 
 BrowseMode::~BrowseMode()
@@ -68,11 +66,22 @@ void BrowseMode::update(float const elapsed_time)
   //if(time > motion.length())
   //  switch_motion(1);
 
-  frame = (unsigned int)(time / motion.skeleton->timestep);
+  unsigned int new_frame = (unsigned int)(time / motion.skeleton->timestep);
+  // XXX: We might be skipping frames because of slow rendering, and this
+  // won't take that into account
+  if(new_frame > frame)
+  {
+    blender.incrementFrame();
+  }
+  else if(frame > new_frame)
+  {
+    blender.decrementFrame();
+  }
+  frame = new_frame;
   //if (frame >= motion.frames()) frame = motion.frames() - 1;
 
   //motion.get_pose(frame, current_pose);
-  blender.nextFrame(frame, current_pose);
+  blender.getPose(current_pose);
 
   /*
   if(frame == 0)

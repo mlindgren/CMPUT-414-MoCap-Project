@@ -5,6 +5,7 @@
 #include <Character/Character.hpp>
 
 #include <vector>
+#include <utility>
 #include <iostream>
 
 namespace Library
@@ -34,11 +35,25 @@ public:
   void getJointPositions(Character::Pose const &pose, 
                          std::vector<Vector3f> &positions);
 
+  /* Populate the distance map by calculating distances between frames.
+   * This is separate from the constructor because it's slooooow. */
+  void populate();
+
+  /* Calculate the "shortest path" between the two animations - the combination
+   * of frames which approximates the minimum distance between blended frame
+   * pairs.  This should maybe be rolled into populate... */
+  void calcShortestPath();
+
+  /* Accessor for shortest_path member.  You must call calcShortestPath()
+   * before calling this or the vector will be empty. */
+  const std::vector<std::pair<unsigned int, unsigned int> >& getShortestPath();
 
   friend ostream& operator<<(ostream &out, DistanceMap &map);
 
 private:
   float *distances;
+
+  std::vector<std::pair<unsigned int, unsigned int> > shortest_path;
 
   /* These should really be const, but I can't make them const and still have
    * distances be heap-allocated without ignoring the rule of three... I am

@@ -4,9 +4,10 @@
 #include <Vector/QuatGL.hpp>
 
 #include <cstring>
+#include <algorithm>
 
 using namespace Character;
-using std::vector;
+using namespace std;
 
 namespace Library
 {
@@ -17,57 +18,6 @@ DistanceMap::DistanceMap(Motion &f, Motion &t)
 {
   distances = new float[from.frames() * to.frames()];
   memset(distances, 0, from.frames() * to.frames() * sizeof(float));
-
-  // Initialize and clear from and to poses
-  // Source and destination probably would have been better words
-  // than from and to
-  Pose from_pose;
-  Pose to_pose;
-  from_pose.clear();
-  to_pose.clear();
-
-  vector<Vector3f> from_pos_vector;
-  vector<Vector3f> to_pos_vector;
-
-  // Hm, this is going to be slow...
-  for(unsigned int i = 0; i < from.frames(); ++i)
-  {
-    for(unsigned int j = 0; j < to.frames(); ++j)
-    {
-      from_pos_vector.clear();
-      to_pos_vector.clear();
-
-      from.get_pose(i, from_pose);
-      to.get_pose(j, to_pose);
-
-      getJointPositions(from_pose, from_pos_vector);
-      getJointPositions(to_pose, to_pos_vector);
-
-      assert(from_pos_vector.size() == to_pos_vector.size());
-
-      for(unsigned int k = 0; k < from_pos_vector.size(); ++k)
-      {
-        *(getDistance(i, j)) += length_squared(from_pos_vector[k] - to_pos_vector[k]);
-      }
-    }
-  }
-
-  /* Testing
-  Pose a;
-  a.clear();
-
-  from.get_pose(0, a);
-  
-  vector<Vector3f> position_vector;
-  getJointPositions(a, position_vector);
-
-  for(vector<Vector3f>::iterator it = position_vector.begin();
-      it < position_vector.end();
-      ++it)
-  {
-    std::cerr << "(" << it->x << ", " << it->y << ", " << it->z << ") ";
-  }
-  */
 
 }
 
@@ -195,6 +145,162 @@ void DistanceMap::getJointPositions(Pose const &pose,
     parent_stack.pop_back();
   }
 
+}
+
+void DistanceMap::populate()
+{
+  // Initialize and clear from and to poses
+  // Source and destination probably would have been better words
+  // than from and to
+  Pose from_pose;
+  Pose to_pose;
+  from_pose.clear();
+  to_pose.clear();
+
+  vector<Vector3f> from_pos_vector;
+  vector<Vector3f> to_pos_vector;
+
+  // Hm, this is going to be slow...
+  for(unsigned int i = 0; i < from.frames(); ++i)
+  {
+    for(unsigned int j = 0; j < to.frames(); ++j)
+    {
+      from_pos_vector.clear();
+      to_pos_vector.clear();
+
+      from.get_pose(i, from_pose);
+      to.get_pose(j, to_pose);
+
+      getJointPositions(from_pose, from_pos_vector);
+      getJointPositions(to_pose, to_pos_vector);
+
+      assert(from_pos_vector.size() == to_pos_vector.size());
+
+      for(unsigned int k = 0; k < from_pos_vector.size(); ++k)
+      {
+        /* TODO: these distances should probably be weighted according to the
+         * length or density, or perhaps most logically weight 
+         * (volume * density) of the bones, so that distance between large 
+         * bones is "more important" than distance between small bones when
+         * when calculating the shortest path. */
+        *(getDistance(i, j)) += length_squared(from_pos_vector[k] - 
+                                               to_pos_vector[k]);
+      }
+    }
+  }
+}
+
+void DistanceMap::calcShortestPath()
+{
+  shortest_path.clear();
+
+  // The Kristine Slot paper suggests a slope limit of 3 frames
+  static const unsigned int slope_limit = 3;
+
+  // Start at the zeroth frame of the first (from) animation
+  unsigned int from_frame = 0;
+
+  // Going to always choose 0, 0 as a starting position for now
+  // According to the Kristine Slot paper this may not result in the shortest
+  // path.  However, because we're blending animations, I think ideally we
+  // should hope to play as much of the first animation as possible before
+  // starting the blend with the second
+  unsigned int to_frame = 0;
+
+  // Counters for subsequent increments
+  unsigned int horiz_counter = 0;
+  unsigned int vert_counter = 0;
+
+  // Push the first frame pair
+  shortest_path.push_back(make_pair(from_frame, to_frame));
+
+  // NB: The path may end before the "to" animation ends, in which case the
+  // blender should just finish playing the to animation
+  while(from_frame < from.frames() - 1)
+  {
+    // If we've already reached the end of the two animation, we always pick the
+    // next from frame.
+    if(to_frame >= to.frames() - 1)
+    {
+      shortest_path.push_back(make_pair(++from_frame, to_frame));
+
+      // We don't care about the slope limit here since we only have one way to
+      // go
+    }
+    // Next check that we're adhering to our slope limit
+    else if(horiz_counter >= slope_limit)
+    {
+      // Reached horizontal maximum; candidates are (x+1, y+1) and (x, y+1)
+      if(*getDistance(from_frame + 1, to_frame + 1) < 
+         *getDistance(from_frame, to_frame + 1))
+      {
+        shortest_path.push_back(make_pair(++from_frame, ++to_frame));
+        vert_counter = 0;
+      }
+      else
+      {
+        shortest_path.push_back(make_pair(from_frame, ++to_frame));
+      }
+
+      horiz_counter = 0;
+    }
+    else if(vert_counter >= slope_limit)
+    {
+      // Reached vertical maximum; candidates are (x+1, y+1) and (x+1, y)
+      if(*getDistance(from_frame + 1, to_frame + 1) <
+         *getDistance(from_frame + 1, to_frame))
+      {
+        shortest_path.push_back(make_pair(++from_frame, ++to_frame));
+        horiz_counter = 0;
+      }
+      else
+      {
+        shortest_path.push_back(make_pair(++from_frame, to_frame));
+      }
+
+      vert_counter = 0;
+    }
+    else
+    {
+      float horiz = *getDistance(from_frame + 1, to_frame);
+      float diag = *getDistance(from_frame + 1, to_frame + 1);
+      float vert = *getDistance(from_frame, to_frame + 1);
+
+      float min_dist = min(diag, min(horiz, vert));
+
+      if(min_dist == horiz)
+      {
+        shortest_path.push_back(make_pair(++from_frame, to_frame));
+        ++horiz_counter;
+        vert_counter = 0;
+      }
+      else if(min_dist == diag)
+      {
+        shortest_path.push_back(make_pair(++from_frame, ++to_frame));
+        horiz_counter = 0;
+        vert_counter = 0;
+      }
+      else if(min_dist == vert)
+      {
+        shortest_path.push_back(make_pair(from_frame, ++to_frame));
+        horiz_counter = 0;
+        ++vert_counter;
+      }
+    }
+
+  } // End while - this function is a nightmare
+
+  // Make sure we've pushed all the frames of the "to" animation
+  while(to_frame < to.frames() - 1)
+  {
+    shortest_path.push_back(make_pair(from_frame, ++to_frame));
+  }
+
+}
+
+const vector<pair<unsigned int, unsigned int> >& DistanceMap::getShortestPath()
+{
+  return shortest_path;
 }
 
 ostream& operator<<(ostream &out, DistanceMap &map)
