@@ -212,7 +212,7 @@ Quat<NUM> slerp(Quat<NUM> a, Quat<NUM> const &b, float amt)
   Quat<NUM> res;
   res = a*w1 + b*w2;
 
-  return res;
+  return normalize(res);
 }
 
 template< typename NUM >
