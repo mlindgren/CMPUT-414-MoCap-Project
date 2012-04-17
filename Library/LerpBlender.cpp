@@ -6,6 +6,8 @@
 #include <cassert>
 #include <iostream>
 
+#define INTERP_DIVISOR 2
+
 using namespace Character;
 
 namespace Library
@@ -27,7 +29,7 @@ LerpBlender::LerpBlender(Motion &f, Motion &t)
    * reasons which I'm not going to enumerate at the moment.
    * Also: ternary ifs are bad. Do as I say, not as I do. */
   n_interp_frames = n_from_frames < n_to_frames ? 
-                    (n_from_frames / 4) : (n_to_frames / 4);
+                    (n_from_frames / INTERP_DIVISOR) : (n_to_frames / INTERP_DIVISOR);
 
 }
 
@@ -66,12 +68,7 @@ void LerpBlender::nextFrame(unsigned int frame, Pose &output)
 
   isInterpolating = false;
 
-  /* TODO: Sloppy way of doing this; I'm sure it can be done more elegantly.
-   * We have four options which I'll list in a confusing order:
-   * 1. We're in the interpolation stage
-   * 2. We're only in the first animation
-   * 3. We're only in the second animation (first has finished)
-   * 4. We're finished both animations */
+  // TODO: Sloppy way of doing this; I'm sure it can be done more elegantly.
   if(from_frame >= n_from_frames - n_interp_frames && 
      from_frame < n_from_frames)
   {
@@ -117,6 +114,10 @@ void LerpBlender::nextFrame(unsigned int frame, Pose &output)
   {
     output = to_pose;
   }
+
+  // TODO: This prevents the character from ever moving from the origin
+  // Fixes our skating problem for now, but this is not a proper solution
+  output.root_position.x = output.root_position.z = 0;
 
 }
 

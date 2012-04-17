@@ -90,6 +90,18 @@ void Character::draw(Pose const &pose, State const &state, bool detail, bool col
         //glColor(pose.skeleton->bones[b].color * 0.8);
         glColor4f(pose.skeleton->bones[b].color.x * 0.8, pose.skeleton->bones[b].color.y * 0.8, pose.skeleton->bones[b].color.z * 0.8, alpha);
       }
+
+      /* Uncomment this to draw spheres at joint positions
+      double mv[16];
+      glPointSize(160);
+      glGetDoublev(GL_MODELVIEW_MATRIX, mv);
+      glPushMatrix();
+      glLoadIdentity();
+      glTranslated(mv[12], mv[13], mv[14]);
+      gluSphere(quad, 0.5f, 10, 10);
+      glPopMatrix();
+      */
+
       gluCylinder(quad, pose.skeleton->bones[b].radius, pose.skeleton->bones[b].radius, pose.skeleton->bones[b].length, detail?16:8, 1);
       glRotated(180,1,0,0);
       gluDisk(quad, 0, pose.skeleton->bones[b].radius, detail?16:8, 1);

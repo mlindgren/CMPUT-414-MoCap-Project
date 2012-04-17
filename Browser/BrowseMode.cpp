@@ -9,6 +9,8 @@
 #include <Graphics/Font.hpp>
 #include <Vector/VectorGL.hpp>
 
+#include <Library/DistanceMap.hpp>
+
 #include <string>
 #include <sstream>
 #include <iostream>
@@ -38,6 +40,10 @@ BrowseMode::BrowseMode()
   time = 0.0f;
   play_speed = 1.0f;
   frame = 0;
+
+  Library::DistanceMap d = Library::DistanceMap(Library::motion_nonconst(0), Library::motion_nonconst(0));
+
+  cerr << d;
 }
 
 BrowseMode::~BrowseMode()
@@ -134,11 +140,24 @@ void BrowseMode::handle_event(SDL_Event const &event)
   {
     switch_motion(-1);
   }
+  if(event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_RIGHT &&
+     play_speed == 0.0f)
+  {
+    // XXX: This should come from the skeleton rather than being hardcoded
+    time += 1.0f / 120.0f;
+  }
+  if(event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_LEFT &&
+     play_speed == 0.0f)
+  {
+    // XXX: This should come from the skeleton rather than being hardcoded
+    time -= 1.0f / 120.0f;
+  }
   if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_SPACE)
   {
-    if (play_speed == 1.0f) play_speed = 0.1f;
-    else if (play_speed == 0.1f) play_speed = 0.2f;
-    else if (play_speed == 0.2f) play_speed = 0.5f;
+    if (play_speed == 1.0f) play_speed = 0.5f;
+    else if (play_speed == 0.5f) play_speed = 0.2f;
+    else if (play_speed == 0.2f) play_speed = 0.1f;
+    else if (play_speed == 0.1f) play_speed = 0.0f;
     else play_speed = 1.0f;
   }
   if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_d)

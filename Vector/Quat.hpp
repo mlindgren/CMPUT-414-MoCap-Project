@@ -215,6 +215,21 @@ Quat<NUM> slerp(Quat<NUM> a, Quat<NUM> const &b, float amt)
   return normalize(res);
 }
 
+/* Sphericla linear interpolation which is guaranteed to take the shortest
+ * possible path */
+template <typename NUM>
+Quat<NUM> ideal_slerp(Quat<NUM> a, Quat<NUM> const &b, float amt)
+{
+  // Flip the sign on one quaternion if the dot product between the two is
+  // negative.  This guarantees that the shortest path will be taken.
+  if(dot(a, b) < 0)
+  {
+    a = conjugate(a);
+  }
+
+  return slerp(a, b, amt);
+}
+
 template< typename NUM >
 inline Quat< NUM > abs( Quat< NUM > a )
 {

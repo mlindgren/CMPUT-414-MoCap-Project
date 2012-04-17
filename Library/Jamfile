@@ -2,7 +2,7 @@ TOP = .. ;
 
 SubDir TOP Library ;
 
-NAMES = Library Reader ReadSkeleton Skeleton LerpBlender ;
+NAMES = Library Reader ReadSkeleton Skeleton LerpBlender DistanceMap ;
 
 if $(LIBRARY_USE_VFILE) {
 	NAMES += ReadSkeletonV Vfile WriteAsfAmc WriteBvh ; 
@@ -11,6 +11,8 @@ if $(LIBRARY_USE_VFILE) {
 	LINKFLAGS += -L/usr/lib64 ;
 	LIBRARYLINKLIBS += -lxml2 ;
 }
+
+ObjectC++Flags DistanceMap :  $(SDLC++FLAGS) ;
 
 LIBRARY_OBJECTS = $(NAMES:D=$(SUBDIR):S=$(SUFOBJ)) ;
 
