@@ -18,7 +18,7 @@ class DistanceMap
 {
 public:
   /* Initializes a lerp blender from two motions to be blended */
-  DistanceMap(Motion &f, Motion &t);
+  DistanceMap(const Motion *f, const Motion *t);
   DistanceMap(const DistanceMap &other);
   DistanceMap& operator= (const DistanceMap &other);
 
@@ -33,11 +33,7 @@ public:
    * positions vector. They will be in the same order as the bones are defined
    * in the motion. */
   void getJointPositions(Character::Pose const &pose, 
-                         std::vector<Vector3f> &positions);
-
-  /* Populate the distance map by calculating distances between frames.
-   * This is separate from the constructor because it's slooooow. */
-  void populate();
+                         std::vector<Vector3f> &positions) const;
 
   /* Calculate the "shortest path" between the two animations - the combination
    * of frames which approximates the minimum distance between blended frame
@@ -46,7 +42,7 @@ public:
 
   /* Accessor for shortest_path member.  You must call calcShortestPath()
    * before calling this or the vector will be empty. */
-  const std::vector<std::pair<unsigned int, unsigned int> >& getShortestPath();
+  const std::vector<std::pair<unsigned int, unsigned int> >& getShortestPath() const;
 
   friend ostream& operator<<(ostream &out, DistanceMap &map);
 
@@ -59,8 +55,8 @@ private:
    * distances be heap-allocated without ignoring the rule of three... I am
    * fairly certain I am doing something wrong here in terms of idiomatic C++
    * but I don't know how to fix it. :( */
-  Motion &from;
-  Motion &to;
+  const Motion *from;
+  const Motion *to;
 };
 
 }

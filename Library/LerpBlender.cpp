@@ -15,15 +15,15 @@ using std::pair;
 namespace Library
 {
 
-LerpBlender::LerpBlender(Motion &f, Motion &t)
+LerpBlender::LerpBlender(const Motion *f, const Motion *t)
 : from(f),
   to(t),
   distance_map(f, t),
   last_frame(0),
   cur_frame(0)
 { 
-  n_from_frames = from.frames();
-  n_to_frames = to.frames();
+  n_from_frames = from->frames();
+  n_to_frames = to->frames();
 
   /* For now we're naively interpolating the last quarter of the first animation
    * with the first quarter of the last animation.
@@ -36,13 +36,43 @@ LerpBlender::LerpBlender(Motion &f, Motion &t)
                     (n_from_frames / INTERP_DIVISOR) : (n_to_frames / INTERP_DIVISOR);
 
   // TODO: cout message should go somewhere else
-  std::cout << "Please be patient while the distance map is populated..." << endl;
-  distance_map.populate();
   distance_map.calcShortestPath(n_interp_frames);
 
   global_state.clear();
   velocity_control.clear();
 
+}
+
+LerpBlender::LerpBlender(const LerpBlender &other)
+: from(other.from),
+  to(other.to),
+  global_state(other.global_state),
+  velocity_control(other.velocity_control),
+  distance_map(other.distance_map),
+  last_frame(other.last_frame),
+  cur_frame(other.cur_frame),
+  n_from_frames(other.n_from_frames),
+  n_to_frames(other.n_to_frames),
+  n_interp_frames(other.n_interp_frames)
+{
+}
+
+LerpBlender& LerpBlender::operator= (const LerpBlender &other)
+{
+  if(this == &other) return *this;
+
+  from = other.from;
+  to = other.to;
+  distance_map = other.distance_map;
+  last_frame = other.last_frame;
+  cur_frame = other.cur_frame;
+  n_from_frames = other.n_from_frames;
+  n_to_frames = other.n_to_frames;
+  n_interp_frames = other.n_interp_frames;
+  global_state = other.global_state;
+  velocity_control = other.velocity_control;
+
+  return *this;
 }
 
 void LerpBlender::changeFrame(int delta)
@@ -82,11 +112,11 @@ void LerpBlender::getPose(Pose &output)
 
   const pair<unsigned int, unsigned int> frame_pair = 
     distance_map.getShortestPath()[cur_frame];
-  from.get_pose(frame_pair.first, from_pose);
-  to.get_pose(frame_pair.second, to_pose);
+  from->get_pose(frame_pair.first, from_pose);
+  to->get_pose(frame_pair.second, to_pose);
 
   //float interp_value = (float) cur_frame / distance_map.getShortestPath().size();
-  //float interp_value = (float) frame_pair.first / from.frames();
+  //float interp_value = (float) frame_pair.first / from->frames();
   float interp_value = expf((float) frame_pair.second / n_interp_frames) - 1;
   if(interp_value > 1.0f)
   {
@@ -126,11 +156,11 @@ void LerpBlender::getPose(Pose &output)
   // Determine velocity in each of the animations
   Pose from_last;
   from_last.clear();
-  from.get_pose(last_pair.first, from_last);
+  from->get_pose(last_pair.first, from_last);
 
   Pose to_last;
   to_last.clear();
-  to.get_pose(last_pair.second, to_last);
+  to->get_pose(last_pair.second, to_last);
 
   // We interpolate the velocity according to the interpolation value
   // calculated above
@@ -141,7 +171,7 @@ void LerpBlender::getPose(Pose &output)
   velocity_control.apply_to(global_state, 1);
   global_state.apply_to(output);
 
-  /*if(frame_pair.second > 0 && frame_pair.first < from.frames())
+  /*if(frame_pair.second > 0 && frame_pair.first < from->frames())
     isInterpolating = true;
   else
     isInterpolating = false;*/

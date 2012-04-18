@@ -29,7 +29,7 @@ using std::pair;
 using std::ofstream;
 
 BrowseMode::BrowseMode()
-: blender(Library::motion_nonconst(0), Library::motion_nonconst(1))
+: blender(&Library::motion(0), &Library::motion(1))
 {
   camera = make_vector(10.0f, 10.0f, 10.0f);
   target = make_vector(0.0f, 0.0f, 0.0f);
@@ -63,33 +63,13 @@ void BrowseMode::update(float const elapsed_time)
   time = elapsed_time * play_speed + time;
   if(time < 0) time = 0;
 
-  //if(time > motion.length())
-  //  switch_motion(1);
-
   unsigned int new_frame = (unsigned int)(time / motion.skeleton->timestep);
-  // XXX: We might be skipping frames because of slow rendering, and this
-  // won't take that into account
   blender.changeFrame((int) new_frame - frame);
   frame = new_frame;
   //if (frame >= motion.frames()) frame = motion.frames() - 1;
 
   //motion.get_pose(frame, current_pose);
   blender.getPose(current_pose);
-
-  /*
-  if(frame == 0)
-  {
-    frameZero = true;
-    current_motion_root = current_pose.root_position;
-  }
-  else
-  {
-    if(!frameZero) cerr << "Frame " << frame << " happened before frame 0!" << endl;
-    frameZero = true;
-  }*/
-
-  //current_pose.root_position.x -= current_motion_root.x;
-  //current_pose.root_position.z -= current_motion_root.z;
 
   if (track)
   {
@@ -118,10 +98,18 @@ void BrowseMode::switch_motion(short delta)
   current_motion += delta;
   if (current_motion >= Library::motion_count())
   {
-    current_motion = 0;
+    if(delta > 0)
+      current_motion = 0;
+    else
+      current_motion = Library::motion_count() - 1;
   }
   time = 0.0f;
-  frameZero = false;
+  frame = 0;
+
+  const Library::Motion *m1 = &Library::motion(current_motion);
+  const Library::Motion *m2 = &Library::motion((current_motion + 1) % Library::motion_count());
+
+  blender = Library::LerpBlender(m1, m2);
 }
 
 void BrowseMode::handle_event(SDL_Event const &event)
@@ -434,12 +422,14 @@ void BrowseMode::draw()
   {
     Graphics::FontRef gentium = Graphics::get_font("gentium.txf");
     ostringstream info1, info2, info3, info4;
-    Library::Motion const &motion = Library::motion(current_motion);
-    info1 << "Motion: " << motion.filename;
-    info2 << "Skeleton: " << motion.skeleton->filename;
-    info3 << "Frame " << frame << " " 
+    Library::Motion const *motion = blender.getFromMotion();
+    Library::Motion const *motion2 = blender.getToMotion();
+    info1 << "Blending: " << motion->filename << ", " << motion2->filename;
+    info2 << "Skeleton: " << motion->skeleton->filename;
+    info3 << "Frame " << blender.getFrame() << "/" << blender.workingFrames()
     //(unsigned int)(time / motion.skeleton->timestep) << " of " 
-          << motion.frames() << " (" << 1.0f / motion.skeleton->timestep << " fps)";
+          << " (" << motion->frames() << ", " << motion2->frames()
+          << ") (" << 1.0f / motion->skeleton->timestep << " fps)";
 
     info4 << play_speed << "x speed";
     glEnable(GL_BLEND);

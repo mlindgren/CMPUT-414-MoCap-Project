@@ -15,19 +15,31 @@ class LerpBlender
 {
 public:
   /* Initializes a lerp blender from two motions to be blended */
-  LerpBlender(Motion &f, Motion &t);
+  LerpBlender(const Motion *f, const Motion *t);
+  LerpBlender(const LerpBlender &other);
+  LerpBlender& operator= (const LerpBlender &other);
 
   /* Increment or decrement frame */ 
   void changeFrame(int delta);
 
   void getPose(Character::Pose &output);
 
-private:
-  Motion &from;
-  Motion &to;
+  /* Accessors for motions */
+  const Motion *getFromMotion() const { return from; }
+  const Motion *getToMotion() const { return to; }
 
-  Character::Control velocity_control;
+  /* Get the current frame number */
+  unsigned int getFrame() { return cur_frame; }
+
+  /* Get the number of frames in the interpolated animation */
+  unsigned int workingFrames() { return distance_map.getShortestPath().size(); }
+
+private:
+  const Motion *from;
+  const Motion *to;
+
   Character::State global_state;
+  Character::Control velocity_control;
 
   DistanceMap distance_map;
 

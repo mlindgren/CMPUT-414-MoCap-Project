@@ -4,7 +4,10 @@
 #include <Vector/QuatGL.hpp>
 
 #include <cstring>
+#include <cassert>
 #include <algorithm>
+
+#define UNINITIALIZED -1.0f
 
 using namespace Character;
 using namespace std;
@@ -12,22 +15,27 @@ using namespace std;
 namespace Library
 {
 
-DistanceMap::DistanceMap(Motion &f, Motion &t)
+DistanceMap::DistanceMap(const Motion *f, const Motion *t)
 : from(f),
   to(t)
 {
-  distances = new float[from.frames() * to.frames()];
-  memset(distances, 0, from.frames() * to.frames() * sizeof(float));
+  distances = new float[from->frames() * to->frames()];
+  for(unsigned int i = 0; i < from->frames() * to->frames(); ++i)
+    distances[i] = UNINITIALIZED;
 
+  // Mustn't have null motions
+  assert(from != NULL);
+  assert(to != NULL);
 }
 
 DistanceMap::DistanceMap(const DistanceMap &other)
-: from(other.from),
+: shortest_path(other.shortest_path),
+  from(other.from),
   to(other.to)
 {
-  distances = new float[from.frames() * to.frames()];
+  distances = new float[from->frames() * to->frames()];
   memcpy(distances, other.distances, 
-         from.frames() * to.frames() * sizeof(float));
+         from->frames() * to->frames() * sizeof(float));
 }
 
 DistanceMap& DistanceMap::operator= (const DistanceMap &other)
@@ -39,9 +47,11 @@ DistanceMap& DistanceMap::operator= (const DistanceMap &other)
   from = other.from;
   to = other.to;
 
-  distances = new float[from.frames() * to.frames()];
+  distances = new float[from->frames() * to->frames()];
   memcpy(distances, other.distances, 
-         from.frames() * to.frames() * sizeof(float));
+         from->frames() * to->frames() * sizeof(float));
+
+  shortest_path = other.shortest_path;
 
   return *this;
 }
@@ -53,11 +63,48 @@ DistanceMap::~DistanceMap()
 
 float* DistanceMap::getDistance(unsigned int from_frame, unsigned int to_frame)
 {
-  return &(distances[from_frame + to_frame * from.frames()]);
+
+  // Determine the address of the distance in the map.  If it's already been
+  // initialized, we can return the value immediately.
+  float *addr =  &(distances[from_frame + to_frame * from->frames()]);
+  if(*addr != UNINITIALIZED) return addr;
+
+  // If the distance is uninitialized, we need to calculate the distance
+  // between the two frames.  First initialize and clear from and to poses
+  Pose from_pose;
+  Pose to_pose;
+  from_pose.clear();
+  to_pose.clear();
+
+  vector<Vector3f> from_pos_vector;
+  vector<Vector3f> to_pos_vector;
+
+  from_pos_vector.clear();
+  to_pos_vector.clear();
+
+  from->get_pose(from_frame, from_pose);
+  to->get_pose(to_frame, to_pose);
+
+  getJointPositions(from_pose, from_pos_vector);
+  getJointPositions(to_pose, to_pos_vector);
+
+  assert(from_pos_vector.size() == to_pos_vector.size());
+
+  for(unsigned int k = 0; k < from_pos_vector.size(); ++k)
+  {
+    /* TODO: these distances should probably be weighted according to the
+     * length or density, or perhaps most logically weight 
+     * (volume * density) of the bones, so that distance between large 
+     * bones is "more important" than distance between small bones when
+     * when calculating the shortest path. */
+    *addr += length_squared(from_pos_vector[k] - to_pos_vector[k]);
+  }
+
+  return addr;
 }
 
 void DistanceMap::getJointPositions(Pose const &pose, 
-                                    vector<Vector3f> &positions)
+                                    vector<Vector3f> &positions) const
 {
 
   /* This code is mostly copypasta'd from Chracter/Draw.cpp, because we're using
@@ -147,49 +194,6 @@ void DistanceMap::getJointPositions(Pose const &pose,
 
 }
 
-void DistanceMap::populate()
-{
-  // Initialize and clear from and to poses
-  // Source and destination probably would have been better words
-  // than from and to
-  Pose from_pose;
-  Pose to_pose;
-  from_pose.clear();
-  to_pose.clear();
-
-  vector<Vector3f> from_pos_vector;
-  vector<Vector3f> to_pos_vector;
-
-  // Hm, this is going to be slow...
-  for(unsigned int i = 0; i < from.frames(); ++i)
-  {
-    for(unsigned int j = 0; j < to.frames(); ++j)
-    {
-      from_pos_vector.clear();
-      to_pos_vector.clear();
-
-      from.get_pose(i, from_pose);
-      to.get_pose(j, to_pose);
-
-      getJointPositions(from_pose, from_pos_vector);
-      getJointPositions(to_pose, to_pos_vector);
-
-      assert(from_pos_vector.size() == to_pos_vector.size());
-
-      for(unsigned int k = 0; k < from_pos_vector.size(); ++k)
-      {
-        /* TODO: these distances should probably be weighted according to the
-         * length or density, or perhaps most logically weight 
-         * (volume * density) of the bones, so that distance between large 
-         * bones is "more important" than distance between small bones when
-         * when calculating the shortest path. */
-        *(getDistance(i, j)) += length_squared(from_pos_vector[k] - 
-                                               to_pos_vector[k]);
-      }
-    }
-  }
-}
-
 void DistanceMap::calcShortestPath(unsigned int n_interp_frames)
 {
   shortest_path.clear();
@@ -216,7 +220,7 @@ void DistanceMap::calcShortestPath(unsigned int n_interp_frames)
 
   if(n_interp_frames > 0)
   {
-    while(from_frame < from.frames() - 1 - n_interp_frames)
+    while(from_frame < from->frames() - 1 - n_interp_frames)
     {
       shortest_path.push_back(make_pair(++from_frame, to_frame));
     }
@@ -224,11 +228,11 @@ void DistanceMap::calcShortestPath(unsigned int n_interp_frames)
 
   // NB: The path may end before the "to" animation ends, in which case the
   // blender should just finish playing the to animation
-  while(from_frame < from.frames() - 1)
+  while(from_frame < from->frames() - 1)
   {
     // If we've already reached the end of the two animation, we always pick the
     // next from frame.
-    if(to_frame >= to.frames() - 1)
+    if(to_frame >= to->frames() - 1)
     {
       shortest_path.push_back(make_pair(++from_frame, to_frame));
 
@@ -299,23 +303,23 @@ void DistanceMap::calcShortestPath(unsigned int n_interp_frames)
   } // End while - this function is a nightmare
 
   // Make sure we've pushed all the frames of the "to" animation
-  while(to_frame < to.frames() - 1)
+  while(to_frame < to->frames() - 1)
   {
     shortest_path.push_back(make_pair(from_frame, ++to_frame));
   }
 
 }
 
-const vector<pair<unsigned int, unsigned int> >& DistanceMap::getShortestPath()
+const vector<pair<unsigned int, unsigned int> >& DistanceMap::getShortestPath() const
 {
   return shortest_path;
 }
 
 ostream& operator<<(ostream &out, DistanceMap &map)
 {
-  for(unsigned int i = 0; i < map.from.frames(); ++i)
+  for(unsigned int i = 0; i < map.from->frames(); ++i)
   {
-    for(unsigned int j = 0; j < map.to.frames(); ++j)
+    for(unsigned int j = 0; j < map.to->frames(); ++j)
     {
       out << *(map.getDistance(i, j)) << ", ";
     }
