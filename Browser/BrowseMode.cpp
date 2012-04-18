@@ -69,14 +69,7 @@ void BrowseMode::update(float const elapsed_time)
   unsigned int new_frame = (unsigned int)(time / motion.skeleton->timestep);
   // XXX: We might be skipping frames because of slow rendering, and this
   // won't take that into account
-  if(new_frame > frame)
-  {
-    blender.incrementFrame();
-  }
-  else if(frame > new_frame)
-  {
-    blender.decrementFrame();
-  }
+  blender.changeFrame((int) new_frame - frame);
   frame = new_frame;
   //if (frame >= motion.frames()) frame = motion.frames() - 1;
 
@@ -444,8 +437,10 @@ void BrowseMode::draw()
     Library::Motion const &motion = Library::motion(current_motion);
     info1 << "Motion: " << motion.filename;
     info2 << "Skeleton: " << motion.skeleton->filename;
-    info3 << "Frame " << frame << " " << blender.getIsInterpolating();
-    //(unsigned int)(time / motion.skeleton->timestep) << " of " << motion.frames() << " (" << 1.0f / motion.skeleton->timestep << " fps)";
+    info3 << "Frame " << frame << " " 
+    //(unsigned int)(time / motion.skeleton->timestep) << " of " 
+          << motion.frames() << " (" << 1.0f / motion.skeleton->timestep << " fps)";
+
     info4 << play_speed << "x speed";
     glEnable(GL_BLEND);
     glEnable(GL_TEXTURE_2D);

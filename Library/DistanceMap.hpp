@@ -42,7 +42,7 @@ public:
   /* Calculate the "shortest path" between the two animations - the combination
    * of frames which approximates the minimum distance between blended frame
    * pairs.  This should maybe be rolled into populate... */
-  void calcShortestPath();
+  void calcShortestPath(unsigned int n_interp_frames);
 
   /* Accessor for shortest_path member.  You must call calcShortestPath()
    * before calling this or the vector will be empty. */

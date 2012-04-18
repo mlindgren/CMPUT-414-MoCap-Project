@@ -190,7 +190,7 @@ void DistanceMap::populate()
   }
 }
 
-void DistanceMap::calcShortestPath()
+void DistanceMap::calcShortestPath(unsigned int n_interp_frames)
 {
   shortest_path.clear();
 
@@ -213,6 +213,14 @@ void DistanceMap::calcShortestPath()
 
   // Push the first frame pair
   shortest_path.push_back(make_pair(from_frame, to_frame));
+
+  if(n_interp_frames > 0)
+  {
+    while(from_frame < from.frames() - 1 - n_interp_frames)
+    {
+      shortest_path.push_back(make_pair(++from_frame, to_frame));
+    }
+  }
 
   // NB: The path may end before the "to" animation ends, in which case the
   // blender should just finish playing the to animation

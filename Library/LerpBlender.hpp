@@ -17,23 +17,21 @@ public:
   /* Initializes a lerp blender from two motions to be blended */
   LerpBlender(Motion &f, Motion &t);
 
-  /* These functions caused the blender to advance to the next frame
-   * or return to the previous frame, respectively. */
-  void incrementFrame();
-  void decrementFrame();
+  /* Increment or decrement frame */ 
+  void changeFrame(int delta);
 
   void getPose(Character::Pose &output);
-
-  bool getIsInterpolating() { return isInterpolating; }
 
 private:
   Motion &from;
   Motion &to;
 
+  Character::Control velocity_control;
+  Character::State global_state;
+
   DistanceMap distance_map;
 
-  bool isInterpolating;
-
+  unsigned int last_frame;
   unsigned int cur_frame;
 
   // Current frame in from and to motions
