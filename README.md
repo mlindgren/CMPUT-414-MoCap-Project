@@ -39,6 +39,6 @@ Controls are as follows:
 * **Escape, ⌘+W or ⌘+Q** quit the program.
 
 ## Copyright and License
-Original code is copyright Jim McCann.  Modifications and new files (specifically, `Library/DistanceMap.[ch]pp` and `Library/LerpBlender.[ch]pp` are copyright Mitch Lindgren and Teri Drummond.
+Original code is copyright Jim McCann.  Modifications and new files (specifically, `Library/DistanceMap.[ch]pp` and `Library/LerpBlender.[ch]pp`) are copyright Mitch Lindgren and Teri Drummond.
 
 Jim McCann does not specify a license under which his original code is released.  However, he says "Feel free to use in your own projects (please retain some pointer or reference to the original source in a readme or credits section, however)."  Therefore, please feel free to use this code however you see fit, according to those conditions.
