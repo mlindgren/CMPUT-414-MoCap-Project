@@ -11,6 +11,7 @@
 
 using namespace Character;
 using std::pair;
+using std::vector;
 
 namespace Library
 {
@@ -75,6 +76,55 @@ LerpBlender& LerpBlender::operator= (const LerpBlender &other)
   return *this;
 }
 
+LerpBlender LerpBlender::blendFromBlend(const LerpBlender &old, const Motion *m)
+{
+
+  // Create a new LerpBlender from the old "to" motion, and the new motion, m
+  LerpBlender blender(old.to, m);
+
+  /* Here's the complicated part... frames are specified by locations in the
+   * distance map.  To determine which frame we should be on, we need to
+   * find the place in our new distance map where the first element of
+   * the frame pair (from frame number) matches the second element in
+   * the current frame pair of the old distance map (its to frame number).
+   * This is pretty inefficient since we have to iterate through the path
+   * until we find the right frame.  There's probably a better way to do this,
+   * but it might involve redesigning the LerpBlender to be more
+   * forward-thinking with regard to blending multiple animations. */
+
+   /****************************************************************************
+    * WARNING!
+    ****************************************************************************
+    * The following code is potentially confusing because "frame" is used in
+    * two different ways to refer to different things.  The cur_frame member
+    * variable is not actually a frame number but rather an index into the
+    * distance map, which gives a pair of frame numbers for the to and from
+    * animations.  target_frame, however, is an actual frame number.
+    * TODO: Fix this. */
+
+  blender.cur_frame = 0;
+  const vector<pair<unsigned int, unsigned int> > &old_path = 
+    old.distance_map.getShortestPath();
+  unsigned int target_frame = old_path[old.cur_frame].second;
+  
+  for(vector<pair<unsigned int, unsigned int> >::const_iterator it = 
+        old_path.begin();
+      it < old_path.end();
+      ++it, ++blender.cur_frame)
+  {
+    if(it->first == target_frame) break;
+  }
+ 
+  // Figure out what our last frame would have been
+  blender.last_frame = blender.cur_frame - (old.cur_frame - old.last_frame);
+
+  // Copy global state from the old blender so the motion stays in the right
+  // position
+  blender.global_state = old.global_state;
+  
+  return blender;
+}
+
 void LerpBlender::changeFrame(int delta)
 {
   last_frame = cur_frame;
@@ -115,8 +165,6 @@ void LerpBlender::getPose(Pose &output)
   from->get_pose(frame_pair.first, from_pose);
   to->get_pose(frame_pair.second, to_pose);
 
-  //float interp_value = (float) cur_frame / distance_map.getShortestPath().size();
-  //float interp_value = (float) frame_pair.first / from->frames();
   float interp_value = expf((float) frame_pair.second / n_interp_frames) - 1;
   if(interp_value > 1.0f)
   {

@@ -29,13 +29,13 @@ using std::pair;
 using std::ofstream;
 
 BrowseMode::BrowseMode()
-: blender(&Library::motion(0), &Library::motion(1))
+: auto_advance(true),
+  blender(&Library::motion(0), &Library::motion(1))
 {
   camera = make_vector(10.0f, 10.0f, 10.0f);
   target = make_vector(0.0f, 0.0f, 0.0f);
   current_motion_root = make_vector(0.0f, 0.0f, 0.0f);
   track = false;
-  frameZero = false;
   current_pose.clear();
   current_state.clear();
   current_motion = 0;
@@ -66,9 +66,16 @@ void BrowseMode::update(float const elapsed_time)
   unsigned int new_frame = (unsigned int)(time / motion.skeleton->timestep);
   blender.changeFrame((int) new_frame - frame);
   frame = new_frame;
-  //if (frame >= motion.frames()) frame = motion.frames() - 1;
 
-  //motion.get_pose(frame, current_pose);
+  if(auto_advance && blender.firstAnimationIsDone())
+  {
+    // Increment the current motion, looping around to zero if we've reached
+    // the end.
+    if(++current_motion >= Library::motion_count()) current_motion = 0;
+
+    blender = Library::LerpBlender::blendFromBlend(blender, &Library::motion(current_motion));
+  }
+
   blender.getPose(current_pose);
 
   if (track)
@@ -114,9 +121,15 @@ void BrowseMode::switch_motion(short delta)
 
 void BrowseMode::handle_event(SDL_Event const &event)
 {
+  /* TODO: This should be a single if(SDL_KEYDOWN) with a nested
+   * switch instead of a huge ugly awful list of ifs. Pedantry/readability! */
   if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_TAB)
   {
     track = !track;
+  }
+  if(event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_a)
+  {
+    auto_advance = !auto_advance;
   }
   if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE)
   {
@@ -427,11 +440,15 @@ void BrowseMode::draw()
     info1 << "Blending: " << motion->filename << ", " << motion2->filename;
     info2 << "Skeleton: " << motion->skeleton->filename;
     info3 << "Frame " << blender.getFrame() << "/" << blender.workingFrames()
-    //(unsigned int)(time / motion.skeleton->timestep) << " of " 
           << " (" << motion->frames() << ", " << motion2->frames()
           << ") (" << 1.0f / motion->skeleton->timestep << " fps)";
 
-    info4 << play_speed << "x speed";
+    info4 << play_speed << "x speed; auto-advance ";
+    if(auto_advance)
+      info4 << "on";
+    else
+      info4 << "off";
+
     glEnable(GL_BLEND);
     glEnable(GL_TEXTURE_2D);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

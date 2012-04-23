@@ -32,11 +32,14 @@ public:
 
   virtual void draw();
 
+  /* If true, the browser will automatically cycle through animations by
+   * switching to a new animation blend as soon as the first animation in
+   * the current blend is done. */
+  bool auto_advance;
+
   Vector3f camera;
   Vector3f target;
   bool track;
-
-  bool frameZero;
 
   Character::Pose current_pose;
   Character::State current_state;

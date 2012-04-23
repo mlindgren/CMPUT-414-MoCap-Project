@@ -110,7 +110,15 @@ void DistanceMap::getJointPositions(Pose const &pose,
   /* This code is mostly copypasta'd from Chracter/Draw.cpp, because we're using
    * OpenGL to calculate the joint positions from the ModelView matrix.  This is
    * kind of a huge hack, but it's also the fastest and easiest way I can think
-   * of to do this. */
+   * of to do this. 
+   *
+   * Update Apr 22 2012: I thought I had read the USING file before, but I was
+   * mistaken.  Lesson learned: be sure to read the relevant documentation
+   * first.  As it turns out, Character::WorldBones from pose_utils.hpp provides
+   * a function to get the base and tip of each bone in the skeleton using a
+   * much more sensible method.  Don't have time to change and test it at
+   * the moment. TODO: Should change this to use Character::WorldBones instead
+   * of a stupid OpenGL matrix reading hack. */
 
   glPushMatrix();
   

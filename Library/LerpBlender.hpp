@@ -5,6 +5,8 @@
 #include <Library/DistanceMap.hpp>
 #include <Character/Character.hpp>
 
+#include <vector>
+
 // Herp derp lerp
 namespace Library
 {
@@ -18,6 +20,8 @@ public:
   LerpBlender(const Motion *f, const Motion *t);
   LerpBlender(const LerpBlender &other);
   LerpBlender& operator= (const LerpBlender &other);
+
+  static LerpBlender blendFromBlend(const LerpBlender &old, const Motion *m);
 
   /* Increment or decrement frame */ 
   void changeFrame(int delta);
@@ -34,7 +38,17 @@ public:
   /* Get the number of frames in the interpolated animation */
   unsigned int workingFrames() { return distance_map.getShortestPath().size(); }
 
+  /* Returns true if the first animation is done, indicating that
+   * the next animation may be advanced to (using the blendFromBlend factory
+   * method.) */
+  inline bool firstAnimationIsDone()
+  {
+    return distance_map.getShortestPath()[cur_frame].first == n_from_frames - 1;
+  }
+
+
 private:
+
   const Motion *from;
   const Motion *to;
 
@@ -43,12 +57,11 @@ private:
 
   DistanceMap distance_map;
 
+  /* WARNING: These aren't actually frame numbers, but indexes into the distance
+   * map, which provides pairs of frame numbers.
+   * TODO: These names are confusing and should be changed. */
   unsigned int last_frame;
   unsigned int cur_frame;
-
-  // Current frame in from and to motions
-  //unsigned int from_frame;
-  //unsigned int to_frame;
 
   // Number of frames in from and to motions
   // TODO: Bad names
